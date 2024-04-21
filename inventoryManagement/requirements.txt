@@ -1,0 +1,5 @@
+pymysql
+flask==2.3.3
+flask-cors
+flask-mysql
+python-dotenv
