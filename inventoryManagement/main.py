@@ -51,7 +51,7 @@ def filter_date_inventory():
                 totalPrice += row['price']
             
             response = jsonify({
-                "items": [results],
+                "items": results,
                 "total_price": totalPrice
             })
 
@@ -114,23 +114,42 @@ def filter_inventory():
         _field = _json['sort']['field']
         _order = _json['sort']['order']
 
-        if _category and request.method == 'POST':
+        if request.method == 'POST':
             conn = mysql.connect()
             cursor = conn.cursor(pymysql.cursors.DictCursor)
             sqlQuery = "SELECT id, name, category, price FROM items WHERE "
             bindData = ()
+            isCategory = False;
+            isPriceRange = False;
+            isName = False;
 
             if _category != 'all':
-                sqlQuery = sqlQuery+"category = %s AND "
+                sqlQuery = sqlQuery+"category = %s "
                 bindData += (_category,)
+                isCategory = True
 
-            if _price_range:
-                sqlQuery = sqlQuery+"(price BETWEEN %s AND %s) AND "
-                bindData += (_price_range[0], _price_range[1],)
+            if _price_range and isCategory is True:
+                if _price_range[0] != 0 and _price_range[1] != 0:
+                    sqlQuery = sqlQuery+"AND (price BETWEEN %s AND %s) "
+                    bindData += (_price_range[0], _price_range[1],)
+                    isPriceRange = True
+            elif _price_range:
+                if _price_range[0] != 0 and _price_range[1] != 0:
+                    sqlQuery = sqlQuery+"(price BETWEEN %s AND %s) "
+                    bindData += (_price_range[0], _price_range[1],)
+                    isPriceRange = True
 
-            if _name:
+            if _name and (isCategory is True or isPriceRange is True):
+                sqlQuery = sqlQuery+"AND name LIKE %s "
+                bindData += ("%{}%".format(_name),)
+                isName = True
+            elif _name:
                 sqlQuery = sqlQuery+"name LIKE %s "
                 bindData += ("%{}%".format(_name),)
+                isName = True
+
+            if isCategory is not True and isPriceRange is not True and isName is not True :
+                sqlQuery = "SELECT id, name, category, price FROM items "
             
             if _page and _limit and _field and _order:
                 _start = 0
@@ -141,12 +160,16 @@ def filter_inventory():
 
             cursor.execute(sqlQuery, bindData)
             results = cursor.fetchall()
-            
+            cursor.execute("SELECT count(*) as total FROM items")
+            recordsResult = cursor.fetchone()['total']
+            print (sqlQuery)
+            print (bindData)
             response = jsonify({
-                "items": [results],
+                "items": results,
                 "count": len(results),
                 "page": _page,
-                "limit": _limit
+                "limit": _limit,
+                "total": recordsResult
             })
             
             response.status_code = 200
