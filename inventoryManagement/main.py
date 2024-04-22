@@ -6,6 +6,8 @@ from config import mysql
 from flask import jsonify
 from flask import flash, request
 
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+
 @app.route('/test', methods=['GET'])
 def test():
     message = {
@@ -85,7 +87,7 @@ def category_inventory():
             results = cursor.fetchall()
             
             response = jsonify({
-                "items": [results]
+                "items": results
             })
             
             response.status_code = 200
@@ -163,19 +165,34 @@ def insert_inventory():
         _json = request.json
         _name = _json['name']
         _email = _json['category']
-        _phone = _json['price']
-        if _name and _email and _phone and request.method == 'POST':
+        _price = _json['price']
+        if _name and _email and _price and request.method == 'POST':
             conn = mysql.connect()
-            cursor = conn.cursor(pymysql.cursors.DictCursor)	
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
             _created_dt = time.strftime('%Y-%m-%d %H:%M:%S')
             _last_updated_dt = time.strftime('%Y-%m-%d %H:%M:%S')
-            sqlQuery = "INSERT INTO items(name, category, price, created_dt, last_updated_dt) VALUES(%s, %s, %s, %s, %s)"
-            bindData = (_name, _email, _phone, _created_dt, _last_updated_dt)            
-            cursor.execute(sqlQuery, bindData)
-            conn.commit()
 
-            cursor.execute("SELECT MAX(id) as id FROM items")
-            results = cursor.fetchone()
+            checkSqlQuery = "SELECT name FROM items WHERE name = %s"
+            bindCheckData = (_name)
+            cursor.execute(checkSqlQuery, bindCheckData)
+            checkQueryResults = cursor.fetchall()
+            results = ''
+
+            if len(checkQueryResults) == 0:
+                sqlQuery = "INSERT INTO items(name, category, price, created_dt, last_updated_dt) VALUES(%s, %s, %s, %s, %s)"
+                bindData = (_name, _email, _price, _created_dt, _last_updated_dt)            
+                cursor.execute(sqlQuery, bindData)
+                conn.commit()
+                cursor.execute("SELECT MAX(id) as id FROM items")
+                results = cursor.fetchone()
+            else:
+                sqlQuery = "UPDATE items SET name = %s, category = %s, price = %s, last_updated_dt = %s WHERE name = %s"
+                bindData = (_name, _email, _price, _last_updated_dt, _name)            
+                cursor.execute(sqlQuery, bindData)
+                conn.commit()
+                bindIdData = (_name)
+                cursor.execute("SELECT id FROM items WHERE name = %s", bindIdData)
+                results = cursor.fetchone()
 
             response = jsonify(results)
             response.status_code = 200
@@ -199,4 +216,4 @@ def showMessage(error=None):
     return response
 
 if __name__ == "__main__":
-    app.run(port=8000, debug=os.getenv('DEBUG'))
+    app.run(port=os.getenv('PORT'), debug=os.getenv('DEBUG'))
