@@ -151,6 +151,9 @@ def filter_inventory():
             if isCategory is not True and isPriceRange is not True and isName is not True :
                 sqlQuery = "SELECT id, name, category, price FROM items "
             
+            cursor.execute(sqlQuery, bindData)
+            recordsResult = len(cursor.fetchall())
+
             if _page and _limit and _field and _order:
                 _start = 0
                 if _page > 1:
@@ -160,8 +163,7 @@ def filter_inventory():
 
             cursor.execute(sqlQuery, bindData)
             results = cursor.fetchall()
-            cursor.execute("SELECT count(*) as total FROM items")
-            recordsResult = cursor.fetchone()['total']
+            
             print (sqlQuery)
             print (bindData)
             response = jsonify({
