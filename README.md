@@ -4,7 +4,7 @@ This project is the backend component for an inventory management system
 ## Set up
 To set up the project, you would need an IDE that supports Python. This project was created with Python 3.9.2
 
-Run the following command to install the required packages:
+Run the following command in a terminal/command prompt in the inventoryMangement directory to install the required packages:
 > python -m pip install -r requirements.txt
 
 ## DB Set up
